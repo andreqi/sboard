@@ -1,0 +1,4 @@
+sboard
+======
+
+programming contest scoreboard
