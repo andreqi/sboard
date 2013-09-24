@@ -1,10 +1,20 @@
 
+// UTILS
+var clear_child = function (node) {
+    while (node.lastChild)    
+        node.removeChild(node.lastChild);
+};
+
+
 var findById = function(id) {
     return document.getElementById(id);
 };
 
+// main objects
 var table = {};
 
+// creating new row object and linking to the table
+// it also links the onclick event
 var table_row = function (table_body, data) {
     var body = table_body;
     var t_row = data;
@@ -23,11 +33,8 @@ var table_row = function (table_body, data) {
             var elem = row; 
     };
 };
-
-var clear_child = function (node) {
-    while (node.lastChild)    
-        node.removeChild(node.lastChild);
-};
+// initialize table object and sets the references with the
+// actual HTML table
 
 var initTable = function () {
     table.id = "scoreboard_table";
@@ -50,10 +57,12 @@ var initTable = function () {
 };
 
 
-
+// EntryPoint
 var initApplication = function () {
     var btn = document.getElementById("genButton");
     initTable();
+    // mock to create random data when the button genButton is 
+    // pressed
     btn.onclick = function () {
         var rows = parseInt(findById("rowNum").value, 10);  
         if (isNaN(rows)) return;
