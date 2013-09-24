@@ -15,8 +15,8 @@ var table_row = function (table_body, data) {
         td.appendChild(text_node);
         row.appendChild(td);
     }
-    row.onclick = function () { alert(data[0]); };
     body.appendChild(row);
+    row.onclick = function () { alert(data[0]); };
     return function() { 
             var parent_body = table_body ; 
             var data_row = data;
