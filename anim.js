@@ -15,7 +15,7 @@ var table = {};
 
 // creating new row object and linking to the table
 // it also links the onclick event
-var table_row = function (table_body, data) {
+var table_row = function (table_body, data, idRow) {
     var body = table_body;
     var t_row = data;
     var row = document.createElement("tr");
@@ -26,12 +26,18 @@ var table_row = function (table_body, data) {
         row.appendChild(td);
     }
     body.appendChild(row);
-    row.onclick = function () { alert(data[0]); };
-    return function() { 
-            var parent_body = table_body ; 
-            var data_row = data;
-            var elem = row; 
-    };
+	var tRow =  function() { 
+		var parent_body = table_body ; 
+		var data_row = data;
+		var elem = row; 
+		var id = idRow;
+		row.onclick = function () { 
+			alert("clicked on row " + id); 
+			table.moveUp(id);
+		};
+	};
+	tRow();
+	return tRow;
 };
 // initialize table object and sets the references with the
 // actual HTML table
@@ -50,10 +56,20 @@ var initTable = function () {
     };
     table.addRow = function(data) {
        //alert(data[0]);
-       var tRow = table_row(table.body, data);
+       var tRow = table_row(table.body, data, this.rows.length);
        this.rows.push(tRow);
        console.log(data[0]);
     };
+	table.moveUp = function(idRow) {
+		if (idRow === 0) return;
+		// swapear idRow con idRow - 1 
+		// estaba pensando en reemplazar tambien los nodos originales de DOM
+		// pero es mas facil solo reescribir el contenido 
+		// y luego hacer un repaint
+		// Para el efecto de ir arriba tener una copia de idRow con zIndex > que idRow - 1
+		// al momento que se cruzan, 
+		console.log("moving up row " + idRow);
+	};
 };
 
 
