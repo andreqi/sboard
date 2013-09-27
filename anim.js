@@ -26,17 +26,19 @@ var table_row = function (table_body, data, idRow) {
         row.appendChild(td);
     }
     body.appendChild(row);
-	var tRow =  function() { 
-		var parent_body = table_body ; 
-		var data_row = data;
-		var elem = row; 
-		var id = idRow;
-		row.onclick = function () { 
-			alert("clicked on row " + id); 
-			table.moveUp(id);
-		};
+
+	var tRow = { 
+		parent_body: table_body, 
+		data_row : data,
+		elem : row, 
+		id : idRow
 	};
-	tRow();
+
+	tRow.elem.onclick = function () { 
+			alert("clicked on row " + tRow.data_row + " " + tRow.id ); 
+			table.moveUp(tRow.id);
+	};
+
 	return tRow;
 };
 // initialize table object and sets the references with the
@@ -68,6 +70,15 @@ var initTable = function () {
 		// y luego hacer un repaint
 		// Para el efecto de ir arriba tener una copia de idRow con zIndex > que idRow - 1
 		// al momento que se cruzan, 
+		var pivot = this.rows[idRow];
+		var row = pivot.elem, 
+			pai = pivot.parent_body,
+			sibling = row.previousElementSibling;
+		pai.insertBefore(row, sibling);
+		this.rows[idRow] = this.rows[idRow-1];
+		this.rows[idRow-1] = pivot; 
+		this.rows[idRow-1].id = idRow-1;
+		this.rows[idRow].id = idRow;
 		console.log("moving up row " + idRow);
 	};
 };
