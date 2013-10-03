@@ -35,7 +35,7 @@ var table_row = function (table_body, data, idRow) {
 	};
 
 	tRow.elem.onclick = function () { 
-			alert("clicked on row " + tRow.data_row + " " + tRow.id ); 
+			console.log("clicked on row " + tRow.data_row + " " + tRow.id ); 
 			table.moveUp(tRow.id);
 	};
 
@@ -43,6 +43,27 @@ var table_row = function (table_body, data, idRow) {
 };
 // initialize table object and sets the references with the
 // actual HTML table
+
+/*
+tr:hover {
+	-webkit-transform:translateY(-20px);
+    transform:translateY(-20px);
+}
+*/
+
+var preformTransition = function (e, movement) {
+    e.style["webkitTransition"] = "opacity 2s";
+    e.style["webkitTransition"] = "transform 2s";
+    e.style["webkitTransitionTimingFunction"] = "easeInSine";
+    e.style["webkitTransform"]  = "translateY(-"+ movement +"px)";
+    e.addEventListener( 
+        'webkitTransitionEnd', 
+        function( event ) { 
+          e.style["webkitTransition"] = "";
+          e.style["webkitTransitionTimingFunction"] = "";
+          e.style["webkitTransform"]  = "";
+        }, false );
+};
 
 var initTable = function () {
     table.id = "scoreboard_table";
@@ -70,6 +91,7 @@ var initTable = function () {
 		// y luego hacer un repaint
 		// Para el efecto de ir arriba tener una copia de idRow con zIndex > que idRow - 1
 		// al momento que se cruzan, 
+    preformTransition(this.rows[idRow].elem, this.rows[idRow].elem.offsetHeight);
 		var pivot = this.rows[idRow];
 		var row = pivot.elem, 
 			pai = pivot.parent_body,
