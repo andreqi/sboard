@@ -51,17 +51,20 @@ tr:hover {
 }
 */
 
-var preformTransition = function (e, movement) {
-    e.style["webkitTransition"] = "opacity 2s";
-    e.style["webkitTransition"] = "transform 2s";
+var preformTransition = function (e, movement, transition_end) {
+    e.style["webkitTransition"] = "-webkit-transform";
+    e.style["webkitTransitionDuration"] = "1.5s";
     e.style["webkitTransitionTimingFunction"] = "easeInSine";
     e.style["webkitTransform"]  = "translateY(-"+ movement +"px)";
     e.addEventListener( 
         'webkitTransitionEnd', 
         function( event ) { 
+          console.log("transition ended");
           e.style["webkitTransition"] = "";
           e.style["webkitTransitionTimingFunction"] = "";
+          e.style["webkitTransitionDuration"] = "";
           e.style["webkitTransform"]  = "";
+          transition_end();
         }, false );
 };
 
@@ -91,17 +94,24 @@ var initTable = function () {
 		// y luego hacer un repaint
 		// Para el efecto de ir arriba tener una copia de idRow con zIndex > que idRow - 1
 		// al momento que se cruzan, 
-    preformTransition(this.rows[idRow].elem, this.rows[idRow].elem.offsetHeight);
-		var pivot = this.rows[idRow];
-		var row = pivot.elem, 
-			pai = pivot.parent_body,
-			sibling = row.previousElementSibling;
-		pai.insertBefore(row, sibling);
-		this.rows[idRow] = this.rows[idRow-1];
-		this.rows[idRow-1] = pivot; 
-		this.rows[idRow-1].id = idRow-1;
-		this.rows[idRow].id = idRow;
-		console.log("moving up row " + idRow);
+    var transition_end = function (tableObject, id) {
+      return function() {
+        var pivot = tableObject.rows[id];
+        var row = pivot.elem, 
+            pai = pivot.parent_body,
+            sibling = row.previousElementSibling;
+        pai.insertBefore(row, sibling);
+        tableObject.rows[id] = tableObject.rows[id-1];
+        tableObject.rows[id-1] = pivot; 
+        tableObject.rows[id-1].id = id-1;
+        tableObject.rows[id].id = id;
+        console.log("moving up row " + id);
+      }
+    };
+
+    preformTransition(this.rows[idRow].elem, 
+        this.rows[idRow].elem.offsetHeight,
+        transition_end (this, idRow));
 	};
 };
 

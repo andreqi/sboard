@@ -4,9 +4,10 @@ td {
 	padding: 10px;
 	border-color: red;
 }
-
+/*
 tr {
-  -webkit-transition: -webkit-transform 2s;
+  -webkit-transition: -webkit-transform;
+  -webkit-transition-duration: 2s;
   -webkit-transition-timing-function: easeInSine;
 }
 
@@ -15,3 +16,4 @@ tr:hover {
     transform:translateY(-20px);
 }
 
+*/
