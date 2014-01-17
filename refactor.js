@@ -9,14 +9,17 @@ var board_handler = (function () {
 	var table = {
 		body : null, 
 		nodes : null,
+		lock : null, 
 		in_transition : false,
 		init_table : function () {
 			this.body = scoreboard_table.childNodes[3];
 			this.nodes = [];
+			this.lock = [];
 			in_transition = false;
 		}, 
 		clear : function () {
 			this.nodes.length = 0;
+			this.lock.length = 0;
 			while (this.body.lastChild)
 				this.body.removeChild(this.body.lastChild);
 			in_transition = false;
@@ -43,7 +46,7 @@ var board_handler = (function () {
 				next.prev_id = row.prev_id;
 			}
 		},
-		insert_node : function (id_n, id_new ,next , node) {
+		insert_node : function (id_n, id_new, next, node) {
 			if (next.prev_id === -1) {
 				node.next_id = id_n;
 				node.prev_id = -1;
@@ -62,42 +65,53 @@ var board_handler = (function () {
 			e.style["webkitTransitionDuration"] = "1.5s";
 			e.style["webkitTransitionTimingFunction"] = "easeInSine";
 			e.style["webkitTransform"]  = "translateY("+ movement +"px)";
-			var flag = true;
-			e.addEventListener( 
-					'webkitTransitionEnd', 
-					function( event ) { 
-						console.log("transition ended");
-						e.style["webkitTransition"] = "";
-						e.style["webkitTransitionTimingFunction"] = "";
-						e.style["webkitTransitionDuration"] = "";
-						e.style["webkitTransform"]  = "";
-						if (!flag) return;
-						callback();
-					}, false );
+			var auto_delete = (function () {
+				var handler = function (event) {
+					e.removeEventListener('webkitTransitionEnd', handler);
+					console.log("transition ended " + e.textContent);
+					e.style["webkitTransition"] = "";
+					e.style["webkitTransitionTimingFunction"] = "";
+					e.style["webkitTransitionDuration"] = "";
+					e.style["webkitTransform"]  = "";
+					callback();
+				};
+				return handler;
+			})();
+			e.addEventListener('webkitTransitionEnd', auto_delete);
 		},
 		move_up : function (e) {
 			if (this.nodes[e].prev_id < 0) 
 				return;
 			console.log("moving up row " + e);
-			if (this.in_transition) 
-				return;
-			this.in_transition = true;
-			var dom_e = table.nodes[e].dom_e;
+			if (this.lock[e] > 0) return;
 			var row  = table.nodes[e];
-			var prev_dom = table.nodes[row.prev_id].dom_e;
-			this.transition(dom_e, dom_e.offsetHeight,
+			var dom_e = row.dom_e;
+			var prev = table.nodes[row.prev_id];
+			var prev_dom = prev.dom_e;
+			var ids = [e, row.prev_id];
+			if (prev.prev_id >= 0) 
+				ids.push(prev.prev_id);
+			if (row.next_id < this.nodes.length) 
+				ids.push(row.next_id);
+			rep (0, ids.length, 
+					function (id) { table.lock[ids[id]]++; }
+				);
+
+			this.transition(dom_e, dom_e.offsetHeight + 2,
 					function () {
-						var row  = table.nodes[e];
-						var prev = table.nodes[row.prev_id];
 						table.delete_node(e);
 						table.insert_node(row.prev_id, e, prev, row); 
 						table.body.insertBefore(row.dom_e, prev.dom_e);
 						table.in_transition = false;
 						console.log("mod row " + e + 
 									" n:" + row.next_id + " p:" + row.prev_id);
+
+						rep (0, ids.length, 
+							function (id) { table.lock[ids[id]]--; }
+						);
 					}
 			);
-			this.transition(prev_dom, -prev_dom.offsetHeight , function(){});
+			this.transition(prev_dom, -(prev_dom.offsetHeight + 2), function(){});
 		},
 		add_row : function (e) {
 			var id = this.nodes.length;
@@ -115,7 +129,7 @@ var board_handler = (function () {
 					dom_row.onclick = function () {
 						console.log("clicked on row " + e + 
 									" n:" + row.next_id + " p:" + row.prev_id);
-						//table.move_up(id);
+						table.move_up(id);
 					};
 
 					return dom_row;
@@ -126,6 +140,7 @@ var board_handler = (function () {
 
 			this.nodes.push(row);
 			this.body.appendChild(row.dom_e);
+			this.lock.push(0);
 
 			console.log(e[0]);
 			return row;
