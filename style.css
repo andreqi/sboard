@@ -1,8 +1,14 @@
 td {
 	border-radius: 8px;
-	background-color: #DAFF73;
 	padding: 10px;
-	border-color: red;
+}
+
+.active {
+	background-color: #FFB000;
+}
+
+.inactive {
+	background-color: #DAFF73;
 }
 /*
 tr {

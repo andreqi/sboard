@@ -68,7 +68,7 @@ var board_handler = (function () {
 			var auto_delete = (function () {
 				var handler = function (event) {
 					e.removeEventListener('webkitTransitionEnd', handler);
-					console.log("transition ended " + e.textContent);
+					//console.log("transition ended " + e.textContent);
 					e.style["webkitTransition"] = "";
 					e.style["webkitTransitionTimingFunction"] = "";
 					e.style["webkitTransitionDuration"] = "";
@@ -79,14 +79,20 @@ var board_handler = (function () {
 			})();
 			e.addEventListener('webkitTransitionEnd', auto_delete);
 		},
-		move_up : function (e) {
-			if (this.nodes[e].prev_id < 0) 
+		move_up : function (e, less_than, next_it) {
+			if (this.nodes[e].prev_id < 0) { 
+				next_it();
 				return;
-			console.log("moving up row " + e);
+			}
+			//console.log("moving up row " + e);
 			if (this.lock[e] > 0) return;
 			var row  = table.nodes[e];
 			var dom_e = row.dom_e;
 			var prev = table.nodes[row.prev_id];
+			if (!less_than(row, prev)) {
+				next_it();
+				return;
+			}
 			var prev_dom = prev.dom_e;
 			var ids = [e, row.prev_id];
 			if (prev.prev_id >= 0) 
@@ -97,21 +103,27 @@ var board_handler = (function () {
 					function (id) { table.lock[ids[id]]++; }
 				);
 
+			this.transition(prev_dom, -(prev_dom.offsetHeight + 2), function(){});
+
 			this.transition(dom_e, dom_e.offsetHeight + 2,
 					function () {
 						table.delete_node(e);
 						table.insert_node(row.prev_id, e, prev, row); 
 						table.body.insertBefore(row.dom_e, prev.dom_e);
 						table.in_transition = false;
-						console.log("mod row " + e + 
-									" n:" + row.next_id + " p:" + row.prev_id);
+					//	console.log("mod row " + e + 
+					//				" n:" + row.next_id + " p:" + row.prev_id);
 
 						rep (0, ids.length, 
 							function (id) { table.lock[ids[id]]--; }
 						);
+						if (row.prev_id < 0 || less_than(row, table.nodes[row.prev_id]))
+							table.move_up(e, less_than, next_it);
+						else {
+							next_it();
+						}
 					}
 			);
-			this.transition(prev_dom, -(prev_dom.offsetHeight + 2), function(){});
 		},
 		add_row : function (e) {
 			var id = this.nodes.length;
@@ -126,10 +138,13 @@ var board_handler = (function () {
 						dom_row.appendChild(td);
 					});
 
+					dom_row.classList.add('inactive');
 					dom_row.onclick = function () {
-						console.log("clicked on row " + e + 
-									" n:" + row.next_id + " p:" + row.prev_id);
-						table.move_up(id);
+						//console.log("clicked on row " + e + 
+						//			" n:" + row.next_id + " p:" + row.prev_id);
+						table.move_up(id, function (a, b) {
+							return a.data[0] < b.data[0];
+						});
 					};
 
 					return dom_row;
@@ -142,7 +157,7 @@ var board_handler = (function () {
 			this.body.appendChild(row.dom_e);
 			this.lock.push(0);
 
-			console.log(e[0]);
+			//console.log(e[0]);
 			return row;
 		}
 	};
@@ -156,12 +171,33 @@ var board_handler = (function () {
 				if (rows <= 0) return;
 				table.clear();
 				rep (0, rows, function (id) {
-					table.add_row(["Name "+(id), "p1", "p2", "p3"]);
+					var xd = (1 + Math.floor(Math.random() * rows));
+					table.add_row([xd, "Name "+id, "-", "-", "-"]);
 				});
+				_o.play(rows - 1);
 			};
 		},
 		move_up : function (id) {
 			table.move_up(id);
+		},
+		play : function (n) {
+			if (n < 0) return;
+			var last = n;
+			var id = table.nodes[last].prev_id;
+			var dom = table.nodes[last].dom_e;
+			dom.classList.remove('inactive');
+			dom.classList.add('active');
+			table.move_up(
+					last, 
+					function (a, b) {
+						return a.data[0] < b.data[0];
+					}, 
+					function () {
+						dom.classList.remove('active');
+						dom.classList.add('inactive');
+						setTimeout(_o.play(id), 1000);
+					});
+
 		}
 	};
 	return _o;
