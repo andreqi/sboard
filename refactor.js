@@ -1,3 +1,77 @@
+var linked_list = function () {
+
+	var node_methods = {
+		_b : null, _e : null, 
+		has_prev : function () {
+			return (this.prev !== null && 
+					this.prev !== this._b);
+		},
+		has_next : function () {
+			return (this.next !== null && 
+					this.next !== this._e);
+		}, 
+		it_next : function (dir) {
+			if (dir < 0) return this.prev;
+			return this.next;
+		}
+	};
+
+	var list = {
+		_begin : null, 
+		_end : null,
+		length : null,
+		init : function () {
+			this._begin = this.new_node();
+			this._end = this.new_node();
+			this._begin.next = this._end;
+			this._end.prev = this._begin;
+			node_methods._b = this._begin;
+			node_methods._e = this._end;
+			this.length = 0;
+		}, 
+		new_node : function () {
+			var node = Object.create(node_methods);
+			node.prev = null;
+			node.next = null;
+			return node;
+		}, 
+		// the 'next' node is the one that is in the list, and 'cur' is the new node
+		link : function (cur, next) {
+			cur.next = next;
+			cur.prev = next.prev;
+			next.prev = cur;
+			cur.prev.next = cur;
+		}, 
+		unlink : function (node) {
+			var p = node.prev;
+			var n = node.next;
+			if (p === null || n === null)
+				console.log("invalid operation");
+			p.next = n;
+			n.prev = p;
+		}, 
+		push_back : function (node) {
+			this.link(node, this._end);
+			this.length++;
+			return node;
+		}, 
+		begin : function () {
+			return this._begin.next;
+		}, 
+		end : function () {
+			return this._end;
+		}, 
+		rbegin : function () {
+			return this._end.prev;
+		}, 
+		rend : function () {
+			return this._begin;
+		}
+	};
+	list.init();
+	return list;
+};
+
 var board_handler = (function () {
 
 	var rep = function (i, n, f) {
@@ -8,56 +82,21 @@ var board_handler = (function () {
 
 	var table = {
 		body : null, 
-		nodes : null,
 		lock : null, 
+		node_list : null, 
 		in_transition : false,
 		init_table : function () {
 			this.body = scoreboard_table.childNodes[3];
-			this.nodes = [];
-			this.lock = [];
+			this.lock = [0, 0];
+			this.node_list = linked_list();
 			in_transition = false;
 		}, 
 		clear : function () {
-			this.nodes.length = 0;
 			this.lock.length = 0;
+			this.node_list.init();
 			while (this.body.lastChild)
 				this.body.removeChild(this.body.lastChild);
 			in_transition = false;
-		},
-		delete_node : function (id) {
-			var prev = null;
-			var next = null;
-			var row = this.nodes[id];
-			if (row.prev_id >= 0) 
-				prev = this.nodes[row.prev_id];
-
-			if (row.next_id < this.nodes.length)
-				next = this.nodes[row.next_id];
-			
-			if (prev === null && next === null) 
-				return;	
-
-			if (prev === null) 
-				next.prev_id = -1; 
-			else if (next === null) 
-				prev.next_id = this.nodes.length;
-			else {
-				prev.next_id = row.next_id;
-				next.prev_id = row.prev_id;
-			}
-		},
-		insert_node : function (id_n, id_new, next, node) {
-			if (next.prev_id === -1) {
-				node.next_id = id_n;
-				node.prev_id = -1;
-				next.prev_id = id_new;
-			} else {
-				var prev = this.nodes[next.prev_id];
-				prev.next_id = id_new;
-				node.prev_id = next.prev_id;
-				node.next_id = id_n;
-				next.prev_id = id_new;
-			}
 		},
 		transition : function (e, movement, callback) {
 			movement = -movement;
@@ -68,7 +107,6 @@ var board_handler = (function () {
 			var auto_delete = (function () {
 				var handler = function (event) {
 					e.removeEventListener('webkitTransitionEnd', handler);
-					//console.log("transition ended " + e.textContent);
 					e.style["webkitTransition"] = "";
 					e.style["webkitTransitionTimingFunction"] = "";
 					e.style["webkitTransitionDuration"] = "";
@@ -80,56 +118,51 @@ var board_handler = (function () {
 			e.addEventListener('webkitTransitionEnd', auto_delete);
 		},
 		move_up : function (e, less_than, next_it) {
-			if (this.nodes[e].prev_id < 0) { 
+			next_it = next_it || (function () {});
+			if (!e.has_prev()) {
 				next_it();
 				return;
 			}
-			//console.log("moving up row " + e);
-			if (this.lock[e] > 0) return;
-			var row  = table.nodes[e];
-			var dom_e = row.dom_e;
-			var prev = table.nodes[row.prev_id];
-			if (!less_than(row, prev)) {
+			if (table.lock[e.id] > 0) return;
+
+			var dom_e = e.dom_e;
+			var prev = e.prev;
+			if (!less_than(e, prev)) {
 				next_it();
 				return;
 			}
+
 			var prev_dom = prev.dom_e;
-			var ids = [e, row.prev_id];
-			if (prev.prev_id >= 0) 
-				ids.push(prev.prev_id);
-			if (row.next_id < this.nodes.length) 
-				ids.push(row.next_id);
-			rep (0, ids.length, 
-					function (id) { table.lock[ids[id]]++; }
-				);
+			var ids = [e.id, e.prev.id];
+			if (prev.has_prev()) ids.push(e.prev.prev.id);
+			if (e.has_next())	 ids.push(e.next.id); 
+			rep (0, ids.length, function (id) { table.lock[ids[id]]++; });
 
 			this.transition(prev_dom, -(prev_dom.offsetHeight + 2), function(){});
 
 			this.transition(dom_e, dom_e.offsetHeight + 2,
 					function () {
-						table.delete_node(e);
-						table.insert_node(row.prev_id, e, prev, row); 
-						table.body.insertBefore(row.dom_e, prev.dom_e);
+						table.node_list.unlink(e);
+						table.node_list.link(e, prev);
+						table.body.insertBefore(e.dom_e, prev.dom_e);
 						table.in_transition = false;
-					//	console.log("mod row " + e + 
-					//				" n:" + row.next_id + " p:" + row.prev_id);
 
 						rep (0, ids.length, 
 							function (id) { table.lock[ids[id]]--; }
 						);
-						if (row.prev_id < 0 || less_than(row, table.nodes[row.prev_id]))
+						if (!e.has_prev() || less_than(e, e.prev))
 							table.move_up(e, less_than, next_it);
-						else {
-							next_it();
-						}
+						else next_it();
 					}
 			);
 		},
 		add_row : function (e) {
-			var id = this.nodes.length;
-			var row = {
-				data : e,
-				dom_e : (function () {
+			var _id = this.node_list.length;
+			var node = this.node_list.new_node();
+			var row = Object.create(node);
+			row.id = _id;
+			row.data = e;
+			row.dom_e = (function () {
 					var dom_row = document.createElement("tr");
 					rep (0, e.length, function (id) {
 						var td = document.createElement("td");
@@ -140,24 +173,16 @@ var board_handler = (function () {
 
 					dom_row.classList.add('inactive');
 					dom_row.onclick = function () {
-						//console.log("clicked on row " + e + 
-						//			" n:" + row.next_id + " p:" + row.prev_id);
-						table.move_up(id, function (a, b) {
+						table.move_up(row, function (a, b) {
 							return a.data[0] < b.data[0];
 						});
 					};
 
 					return dom_row;
-				})(),
-				next_id : id + 1,
-				prev_id : id - 1
-			};
-
-			this.nodes.push(row);
+				})();
+			this.node_list.push_back(row);
 			this.body.appendChild(row.dom_e);
 			this.lock.push(0);
-
-			//console.log(e[0]);
 			return row;
 		}
 	};
@@ -174,28 +199,27 @@ var board_handler = (function () {
 					var xd = (1 + Math.floor(Math.random() * rows));
 					table.add_row([xd, "Name "+id, "-", "-", "-"]);
 				});
-				_o.play(rows - 1);
+				_o.play(table.node_list.begin());
 			};
 		},
 		move_up : function (id) {
 			table.move_up(id);
 		},
-		play : function (n) {
-			if (n < 0) return;
-			var last = n;
-			var id = table.nodes[last].prev_id;
-			var dom = table.nodes[last].dom_e;
+		play : function (node) {
+
+			var dom = node.dom_e;
 			dom.classList.remove('inactive');
 			dom.classList.add('active');
-			table.move_up(
-					last, 
+			var next = node.next;
+			var pode = node.has_next();
+			table.move_up(node, 
 					function (a, b) {
 						return a.data[0] < b.data[0];
 					}, 
 					function () {
 						dom.classList.remove('active');
 						dom.classList.add('inactive');
-						setTimeout(_o.play(id), 1000);
+						if (pode) setTimeout(_o.play(next), 1000);
 					});
 
 		}
