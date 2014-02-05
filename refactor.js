@@ -87,7 +87,7 @@ var board_handler = (function () {
 		in_transition : false,
 		init_table : function () {
 			this.body = scoreboard_table.childNodes[3];
-			this.lock = [0, 0];
+			this.lock = [];
 			this.node_list = linked_list();
 			in_transition = false;
 		}, 
@@ -160,6 +160,7 @@ var board_handler = (function () {
 			var _id = this.node_list.length;
 			var node = this.node_list.new_node();
 			var row = Object.create(node);
+
 			row.id = _id;
 			row.data = e;
 			row.dom_e = (function () {
@@ -179,10 +180,25 @@ var board_handler = (function () {
 					};
 
 					return dom_row;
-				})();
-			this.node_list.push_back(row);
-			this.body.appendChild(row.dom_e);
-			this.lock.push(0);
+			})();
+
+      row.reveal = function () {
+        var data = row.data;
+        for (var idx = 1; idx < data.length; idx++) {
+          if (data[idx] === '-') {
+            data[idx] = Math.floor(Math.random()*2);
+            row.dom_e.childNodes[idx].textContent = data[idx];
+            data[0] += data[idx];
+            row.dom_e.childNodes[0].textContent = data[0];
+            if (data[idx] > 0) return true;
+          } 
+        }
+        return false;
+      }
+
+      this.node_list.push_back(row);
+      this.body.appendChild(row.dom_e);
+      this.lock.push(0);
 			return row;
 		}
 	};
@@ -196,32 +212,37 @@ var board_handler = (function () {
 				if (rows <= 0) return;
 				table.clear();
 				rep (0, rows, function (id) {
-					var xd = (1 + Math.floor(Math.random() * rows));
+					var xd = rows - id;
 					table.add_row([xd, "Name "+id, "-", "-", "-"]);
 				});
-				_o.play(table.node_list.begin());
+				_o.play(table.node_list.rbegin());
 			};
 		},
 		move_up : function (id) {
 			table.move_up(id);
 		},
 		play : function (node) {
+      var less = function (a, b) {
+              return a.data[0] > b.data[0];
+            };
 
 			var dom = node.dom_e;
 			dom.classList.remove('inactive');
 			dom.classList.add('active');
-			var next = node.next;
-			var pode = node.has_next();
-			table.move_up(node, 
-					function (a, b) {
-						return a.data[0] < b.data[0];
-					}, 
-					function () {
-						dom.classList.remove('active');
-						dom.classList.add('inactive');
-						if (pode) setTimeout(_o.play(next), 1000);
-					});
-
+			var next = node.prev;
+			var pode = node.has_prev();
+      while (node.reveal() && (pode && !less(node, next))) {
+        
+      }
+      setTimeout(function () {
+        table.move_up(node, 
+            less, 
+            function () {
+              dom.classList.remove('active');
+              dom.classList.add('inactive');
+              if (pode) setTimeout(_o.play(next), 1000);
+            });
+      }, 1000);
 		}
 	};
 	return _o;
